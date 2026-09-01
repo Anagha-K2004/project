@@ -1,0 +1,265 @@
+import 'package:flutter/material.dart';
+import 'register_page.dart';
+// import 'forgot_password_page.dart';
+import 'home_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+  final FirebaseAuth auth = FirebaseAuth.instance;
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+
+  bool hidePassword = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        children: [
+
+          // Background Image
+          // SizedBox(
+          //   width: double.infinity,
+          //   height: double.infinity,
+          //   child: Image.asset(
+          //     "assets/background.jpg",
+          //     fit: BoxFit.cover,
+          //   ),
+          // ),
+
+          // Dark Overlay
+          Container(
+            color: Colors.black.withOpacity(0.45),
+          ),
+
+          // Login Form
+          Center(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(25),
+                child: Container(
+                  padding: const EdgeInsets.all(25),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+
+                      const Icon(
+                        Icons.recycling,
+                        size: 70,
+                        color: Colors.green,
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      const Text(
+                        "Waste Segregation Assistant",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      const Text(
+                        "Login to continue",
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.black54,
+                        ),
+                      ),
+
+                      const SizedBox(height: 30),
+
+                      TextField(
+                        controller: emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: InputDecoration(
+                          prefixIcon: const Icon(Icons.email),
+                          labelText: "Email",
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      TextField(
+                        controller: passwordController,
+                        obscureText: hidePassword,
+                        decoration: InputDecoration(
+                          prefixIcon: const Icon(Icons.lock),
+                          labelText: "Password",
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              hidePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                hidePassword = !hidePassword;
+                              });
+                            },
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 25),
+
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+
+                          onPressed: () async {
+
+                            // Validation
+                            if (emailController.text.trim().isEmpty ||
+                                passwordController.text.trim().isEmpty) {
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("Please enter Email and Password"),
+                                ),
+                              );
+                              return;
+                            }
+
+                            try {
+
+                              UserCredential userCredential =
+                              await auth.signInWithEmailAndPassword(
+                                email: emailController.text.trim(),
+                                password: passwordController.text.trim(),
+                              );
+
+                              DocumentSnapshot userData = await firestore
+                                  .collection("users")
+                                  .doc(userCredential.user!.uid)
+                                  .get();
+
+                              String userName = userData["name"];
+
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => HomePage(
+                                    userName: userName,
+                                  ),
+                                ),
+                              );
+
+                            } on FirebaseAuthException catch (e) {
+
+                              String message;
+
+                              switch (e.code) {
+                                case "invalid-email":
+                                  message = "Invalid Email";
+                                  break;
+
+                                case "user-not-found":
+                                  message = "User not found";
+                                  break;
+
+                                case "wrong-password":
+                                  message = "Wrong Password";
+                                  break;
+
+                                case "invalid-credential":
+                                  message = "Invalid Email or Password";
+                                  break;
+
+                                default:
+                                  message = e.message ?? "Login Failed";
+                              }
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(message)),
+                              );
+                            }
+                          },
+
+                          child: const Text(
+                            "LOGIN",
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 15),
+
+                      TextButton(
+                        onPressed: () {
+
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const RegisterPage(),
+                            ),
+                          );
+
+                        },
+
+                        child: const Text(
+                          "Register",
+                          style: TextStyle(
+                            color: Colors.green,
+                          ),
+                        ),
+                      ),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text("Don't have an account?"),
+                          TextButton(
+                            onPressed: () {},
+                            child: const Text(
+                              "Register",
+                              style: TextStyle(color: Colors.green),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
